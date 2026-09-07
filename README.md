@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JobLign PH
 
-## Getting Started
+Skill-based employment and recruitment platform for Filipino job seekers and employers.
 
-First, run the development server:
+Match scores are recommendations only. They do not guarantee employment or a hiring decision.
+
+## Stack
+
+- Next.js 16 (App Router) + React 19
+- Auth.js (NextAuth v5) credentials + JWT sessions
+- Prisma + SQLite (swap `DATABASE_URL` for PostgreSQL in production)
+- Tailwind CSS 4
+- Zod validation and bcryptjs password hashing
+
+## Setup
+
+1. Copy environment variables:
+
+```bash
+copy .env.example .env
+```
+
+On macOS/Linux use `cp .env.example .env`. Set `AUTH_SECRET` to a long random string.
+
+2. Install dependencies, create the database, and load demo data:
+
+```bash
+npm install
+npx prisma generate
+npx prisma db push
+npx tsx prisma/seed.ts
+```
+
+3. Run the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo accounts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role | Email | Password |
+| --- | --- | --- |
+| Administrator | admin@joblign.ph | Admin123! |
+| Job seeker | seeker@joblign.ph | Seeker123! |
+| Verified employer | employer@joblign.ph | Employer123! |
+| Pending employer | pending@joblign.ph | Employer123! |
 
-## Learn More
+## Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Modules
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Authentication and role-based dashboards (`/seeker`, `/employer`, `/admin`)
+- Job search, applications, resumes, interviews
+- Skill matching engine (`src/lib/matching.ts`)
+- Notifications and recruitment messaging
+- Admin user management, employer verification, reports, settings
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+API details are in [docs/API.md](docs/API.md).

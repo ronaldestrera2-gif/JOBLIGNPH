@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id    Int      @id @default(autoincrement())
+  first_name String
+  last_name  String
+  email      String   @unique
+  password   String
+  role       String
+  status     String   @default("active")
+  created_at DateTime @default(now())
+
+  admin         Admin?
+  employer      Employer?
+  jobSeeker     JobSeeker?
+  notifications Notification[]
+  sentMessages  Message[]                 @relation("MessageSender")
+  conversations ConversationParticipant[]
+
+  @@index([role])
+  @@index([status])
+}
+
+model Admin {
+  admin_id    Int      @id @default(autoincrement())
+  user_id     Int      @unique
+  admin_level String   @default("standard")
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Employer {
+  employer_id         Int       @id @default(autoincrement())
+  user_id             Int       @unique
+  company_name        String
+  company_description String?
+  company_location    String?
+  industry            String?
+  contact_number      String?
+  verification_status String    @default("pending")
+  verified_by         Int?
+  verified_at         DateTime?
+  verification_notes  String?
+  created_at          DateTime  @default(now())
+
+  user           User            @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  companyProfile CompanyProfile?
+  jobPostings    JobPosting[]
+
+  @@index([verification_status])
+}
+
+model CompanyProfile {
+  company_profile_id Int      @id @default(autoincrement())
+  employer_id        Int      @unique
+  logo_path          String?
+  website            String?
+  company_size       String?
+  created_at         DateTime @default(now())
+
+  employer Employer @relation(fields: [employer_id], references: [employer_id], onDelete: Cascade)
+}
+
+model JobSeeker {
+  seeker_id                  Int      @id @default(autoincrement())
+  user_id                    Int      @unique
+  profile_picture            String?
+  headline                   String?
+  education                  String?
+  work_experience            String?
+  experience_years           Int?
+  location                   String?
+  employment_type_preference String?
+  availability               String?
+  certifications             String?
+  other_qualifications       String?
+  created_at                 DateTime @default(now())
+
+  user         User          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  resumes      Resume[]
+  seekerSkills SeekerSkill[]
+  applications Application[]
+  jobMatchings JobMatching[]
+}
+
+model Resume {
+  resume_id   Int      @id @default(autoincrement())
+  seeker_id   Int
+  file_name   String
+  file_path   String
+  uploaded_at DateTime @default(now())
+
+  jobSeeker    JobSeeker     @relation(fields: [seeker_id], references: [seeker_id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([seeker_id])
+}
+
+model Skill {
+  skill_id   Int     @id @default(autoincrement())
+  skill_name String  @unique
+  category   String?
+
+  seekerSkills SeekerSkill[]
+  jobSkills    JobSkill[]
+}
+
+model SeekerSkill {
+  seeker_skill_id Int @id @default(autoincrement())
+  seeker_id       Int
+  skill_id        Int
+
+  jobSeeker JobSeeker @relation(fields: [seeker_id], references: [seeker_id], onDelete: Cascade)
+  skill     Skill     @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade)
+
+  @@unique([seeker_id, skill_id])
+}
+
+model JobPosting {
+  job_id          Int       @id @default(autoincrement())
+  employer_id     Int
+  job_title       String
+  job_description String
+  location        String?
+  employment_type String?
+  salary_range    String?
+  salary_min      Int?
+  salary_max      Int?
+  status          String    @default("draft")
+  posted_at       DateTime  @default(now())
+  deadline        DateTime?
+  closed_reason   String?
+
+  employer      Employer       @relation(fields: [employer_id], references: [employer_id], onDelete: Cascade)
+  jobSkills     JobSkill[]
+  applications  Application[]
+  jobMatchings  JobMatching[]
+  conversations Conversation[]
+
+  @@index([status])
+  @@index([employment_type])
+  @@index([location])
+  @@index([deadline])
+}
+
+model JobSkill {
+  job_skill_id   Int     @id @default(autoincrement())
+  job_id         Int
+  skill_id       Int
+  required_level String?
+
+  jobPosting JobPosting @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+  skill      Skill      @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade)
+
+  @@unique([job_id, skill_id])
+}
+
+model Application {
+  application_id Int      @id @default(autoincrement())
+  seeker_id      Int
+  job_id         Int
+  resume_id      Int?
+  cover_letter   String?
+  status         String   @default("applied")
+  applied_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  jobSeeker  JobSeeker   @relation(fields: [seeker_id], references: [seeker_id], onDelete: Cascade)
+  jobPosting JobPosting  @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+  resume     Resume?     @relation(fields: [resume_id], references: [resume_id])
+  interviews Interview[]
+
+  @@unique([seeker_id, job_id])
+  @@index([status])
+}
+
+model Interview {
+  interview_id   Int       @id @default(autoincrement())
+  application_id Int
+  interview_date DateTime?
+  interview_time String?
+  location       String?
+  status         String    @default("scheduled")
+  notes          String?
+
+  application Application @relation(fields: [application_id], references: [application_id], onDelete: Cascade)
+
+  @@index([application_id])
+  @@index([status])
+}
+
+model Notification {
+  notification_id   Int      @id @default(autoincrement())
+  user_id           Int
+  title             String
+  message           String
+  notification_type String?
+  is_read           Boolean  @default(false)
+  created_at        DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([user_id, is_read])
+}
+
+model JobMatching {
+  match_id       Int      @id @default(autoincrement())
+  seeker_id      Int
+  job_id         Int
+  match_score    Int
+  matched_skills String?
+  missing_skills String?
+  created_at     DateTime @default(now())
+
+  jobSeeker  JobSeeker  @relation(fields: [seeker_id], references: [seeker_id], onDelete: Cascade)
+  jobPosting JobPosting @relation(fields: [job_id], references: [job_id], onDelete: Cascade)
+
+  @@unique([seeker_id, job_id])
+  @@index([match_score])
+}
+
+model Conversation {
+  conversation_id Int      @id @default(autoincrement())
+  job_id          Int?
+  created_at      DateTime @default(now())
+
+  job          JobPosting?               @relation(fields: [job_id], references: [job_id])
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id              Int @id @default(autoincrement())
+  conversation_id Int
+  user_id         Int
+
+  conversation Conversation @relation(fields: [conversation_id], references: [conversation_id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@unique([conversation_id, user_id])
+}
+
+model Message {
+  message_id      Int      @id @default(autoincrement())
+  conversation_id Int
+  sender_id       Int
+  body            String
+  created_at      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [conversation_id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [sender_id], references: [user_id], onDelete: Cascade)
+
+  @@index([conversation_id, created_at])
+}
+
+model SystemSetting {
+  setting_key   String   @id
+  setting_value String
+  updated_at    DateTime @updatedAt
+}
