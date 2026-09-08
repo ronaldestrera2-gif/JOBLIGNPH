@@ -15,10 +15,16 @@ export default async function SeekerPublicProfile({
     include: {
       user: true,
       seekerSkills: { include: { skill: true } },
+      resumes: {
+        orderBy: { uploaded_at: "desc" },
+        take: 1,
+      },
     },
   });
 
   if (!seeker) notFound();
+
+  const resume = seeker.resumes[0] || null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -56,6 +62,7 @@ export default async function SeekerPublicProfile({
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column */}
         <div className="space-y-4">
           <Card className="p-5">
             <h2 className="font-semibold text-lg mb-3">About</h2>
@@ -95,8 +102,26 @@ export default async function SeekerPublicProfile({
               )}
             </div>
           </Card>
+
+          {/* Resume Card */}
+          <Card className="p-5">
+            <h2 className="font-semibold text-lg mb-3">Resume</h2>
+            {resume ? (
+              <a
+                href={`/api/resumes/${resume.resume_id}/file`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition"
+              >
+                📄 View Resume ({resume.file_name})
+              </a>
+            ) : (
+              <p className="text-sm text-slate-500">No resume uploaded</p>
+            )}
+          </Card>
         </div>
 
+        {/* Right Column */}
         <div className="lg:col-span-2 space-y-4">
           <Card className="p-5">
             <h2 className="font-semibold text-lg mb-3">Education</h2>
