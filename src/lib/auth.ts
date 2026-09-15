@@ -2,109 +2,78 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validations";
 import { ROLES } from "@/lib/constants";
+
+export function dashboardPath(role?: string | null) {
+  switch (role) {
+    case ROLES.ADMIN:
+      return "/admin";
+    case ROLES.EMPLOYER:
+      return "/employer";
+    case ROLES.JOB_SEEKER:
+      return "/seeker";
+    default:
+      return "/";
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  secret: process.env.AUTH_SECRET,
-
   session: {
     strategy: "jwt",
   },
-
   pages: {
     signIn: "/login",
   },
-
   providers: [
     Credentials({
-      name: "credentials",
-
+      name: "Credentials",
       credentials: {
-        email: {
-          label: "Email",
-          type: "email",
-        },
-        password: {
-          label: "Password",
-          type: "password",
-        },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
+        const email = String(credentials?.email || "")
+          .trim()
+          .toLowerCase();
+        const password = String(credentials?.password || "");
 
-        if (!parsed.success) {
-          return null;
-        }
+        if (!email || !password) return null;
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: parsed.data.email.toLowerCase(),
-          },
+          where: { email },
         });
 
-        if (!user) {
-          return null;
-        }
+        if (!user) return null;
+        if (user.status && user.status !== "active") return null;
 
-        if (user.status !== "active") {
-          return null;
-        }
-
-        const valid = await bcrypt.compare(
-          parsed.data.password,
-          user.password
-        );
-
-        if (!valid) {
-          return null;
-        }
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) return null;
 
         return {
           id: String(user.user_id),
           email: user.email,
-          name: `${user.first_name} ${user.last_name}`,
+          name: `${user.first_name} ${user.last_name}`.trim(),
           role: user.role,
         };
       },
     }),
   ],
-
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        token.role = (user as any).role;
       }
-
       return token;
     },
-
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token.id as string) ?? "";
-        session.user.role = (token.role as string) ?? "";
+        session.user.id = String(token.id || token.sub || "");
+        (session.user as any).role = token.role;
       }
-
       return session;
     },
   },
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 });
-
-export function dashboardPath(role?: string | null) {
-  if (role === ROLES.ADMIN) {
-    return "/admin";
-  }
-
-  if (role === ROLES.EMPLOYER) {
-    return "/employer";
-  }
-
-  if (role === ROLES.JOB_SEEKER) {
-    return "/seeker";
-  }
-
-  return "/login";
-}

@@ -15,7 +15,10 @@ export async function GET() {
   });
 
   if (!employer) {
-    return NextResponse.json({ error: "Company profile not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Company profile not found." },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({
@@ -31,82 +34,103 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const gate = await requireApiSession([ROLES.EMPLOYER]);
-  if ("error" in gate && gate.error) return gate.error;
+  try {
+    const gate = await requireApiSession([ROLES.EMPLOYER]);
+    if ("error" in gate && gate.error) return gate.error;
 
-  const contentType = req.headers.get("content-type") || "";
+    const employer = await prisma.employer.findUnique({
+      where: { user_id: Number(gate.user!.id) },
+      include: { companyProfile: true },
+    });
 
-  const employer = await prisma.employer.findUnique({
-    where: { user_id: Number(gate.user!.id) },
-    include: { companyProfile: true },
-  });
+    if (!employer) {
+      return NextResponse.json(
+        { error: "Company profile not found." },
+        { status: 404 },
+      );
+    }
 
-  if (!employer) {
-    return NextResponse.json({ error: "Company profile not found." }, { status: 404 });
-  }
+    const contentType = req.headers.get("content-type") || "";
 
-  // Handle Logo Upload
-  if (contentType.includes("multipart/form-data")) {
-    const form = await req.formData();
-    const logo = form.get("logo");
+    // Company logo upload (cloud)
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      const logo = form.get("logo");
 
-    if (logo instanceof File && logo.size > 0) {
+      if (!(logo instanceof File) || logo.size === 0) {
+        return NextResponse.json(
+          { error: "Please choose a logo file." },
+          { status: 400 },
+        );
+      }
+
       const saved = await saveUpload(
         logo,
         "logos",
         logoUploadOptions.allowed,
-        logoUploadOptions.maxBytes
+        logoUploadOptions.maxBytes,
       );
-
-      const logoPath = `/uploads/${saved.relativePath}`;
 
       await prisma.companyProfile.upsert({
         where: { employer_id: employer.employer_id },
-        update: { logo_path: logoPath },
+        update: { logo_path: saved.relativePath },
         create: {
           employer_id: employer.employer_id,
-          logo_path: logoPath,
+          logo_path: saved.relativePath,
         },
       });
 
-      return NextResponse.json({ ok: true, logo_path: logoPath });
+      return NextResponse.json({
+        ok: true,
+        logo_path: saved.relativePath,
+      });
     }
 
-    return NextResponse.json({ ok: true });
-  }
+    // Company profile details (JSON)
+    const body = await req.json();
+    const parsed = employerProfileSchema.safeParse(body);
 
-  // Handle normal profile update (JSON)
-  const parsed = employerProfileSchema.safeParse(await req.json());
-  if (!parsed.success) {
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error:
+            parsed.error.issues[0]?.message ??
+            "Please check your company details.",
+        },
+        { status: 400 },
+      );
+    }
+
+    await prisma.employer.update({
+      where: { employer_id: employer.employer_id },
+      data: {
+        company_name: parsed.data.company_name,
+        company_description: parsed.data.company_description || null,
+        company_location: parsed.data.company_location || null,
+        industry: parsed.data.industry || null,
+        contact_number: parsed.data.contact_number || null,
+      },
+    });
+
+    await prisma.companyProfile.upsert({
+      where: { employer_id: employer.employer_id },
+      update: {
+        website: parsed.data.website || null,
+        company_size: parsed.data.company_size || null,
+      },
+      create: {
+        employer_id: employer.employer_id,
+        website: parsed.data.website || null,
+        company_size: parsed.data.company_size || null,
+      },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error("Employer profile update error:", error);
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Please check your company details." },
-      { status: 400 }
+      { error: error?.message || "Server error while updating company profile." },
+      { status: 500 },
     );
   }
-
-  await prisma.employer.update({
-    where: { employer_id: employer.employer_id },
-    data: {
-      company_name: parsed.data.company_name,
-      company_description: parsed.data.company_description || null,
-      company_location: parsed.data.company_location || null,
-      industry: parsed.data.industry || null,
-      contact_number: parsed.data.contact_number || null,
-    },
-  });
-
-  await prisma.companyProfile.upsert({
-    where: { employer_id: employer.employer_id },
-    update: {
-      website: parsed.data.website || null,
-      company_size: parsed.data.company_size || null,
-    },
-    create: {
-      employer_id: employer.employer_id,
-      website: parsed.data.website || null,
-      company_size: parsed.data.company_size || null,
-    },
-  });
-
-  return NextResponse.json({ ok: true });
 }

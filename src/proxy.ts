@@ -7,8 +7,19 @@ const protectedPrefixes = ["/seeker", "/employer", "/admin", "/dashboard", "/mes
 
 export const proxy = auth((req) => {
   const { pathname } = req.nextUrl;
-  const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  if (!isProtected) return NextResponse.next();
+  const isProtected = protectedPrefixes.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+
+  // Always attach pathname header for layouts
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  if (!isProtected) {
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+  }
 
   if (!req.auth?.user) {
     const login = new URL("/login", req.nextUrl);
@@ -17,21 +28,32 @@ export const proxy = auth((req) => {
   }
 
   const role = req.auth.user.role;
+
   if (pathname.startsWith("/seeker") && role !== ROLES.JOB_SEEKER) {
     return NextResponse.redirect(new URL(dashboardPath(role), req.nextUrl));
   }
+
   if (pathname.startsWith("/employer") && role !== ROLES.EMPLOYER) {
     return NextResponse.redirect(new URL(dashboardPath(role), req.nextUrl));
   }
+
   if (pathname.startsWith("/admin") && role !== ROLES.ADMIN) {
     return NextResponse.redirect(new URL(dashboardPath(role), req.nextUrl));
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 });
 
 export default proxy;
 
 export const config = {
-  matcher: ["/seeker/:path*", "/employer/:path*", "/admin/:path*", "/dashboard", "/messages/:path*"],
+  matcher: [
+    "/seeker/:path*",
+    "/employer/:path*",
+    "/admin/:path*",
+    "/dashboard",
+    "/messages/:path*",
+  ],
 };

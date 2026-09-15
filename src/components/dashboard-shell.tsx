@@ -27,12 +27,25 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Mobile header */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-3 lg:hidden">
         <button type="button" onClick={() => setOpen(true)} aria-label="Open menu">
           <Menu className="h-6 w-6" />
         </button>
-        <span className="font-semibold text-brand">JobLign PH</span>
-        <Link href={items.find((i) => i.label === "Notifications")?.href || "#"} className="relative">
+
+        <div className="flex items-center gap-2">
+          <img
+            src="/logo-ph.png"
+            alt="JobLign PH Logo"
+            className="h-7 w-7 rounded-full object-cover"
+          />
+          <span className="font-semibold text-brand">JobLign PH</span>
+        </div>
+
+        <Link
+          href={items.find((i) => i.label === "Notifications")?.href || "#"}
+          className="relative"
+        >
           <Bell className="h-5 w-5" />
           {unread ? (
             <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-[10px] text-white">
@@ -42,32 +55,59 @@ export function DashboardShell({
         </Link>
       </header>
 
+      {/* Mobile sidebar */}
       {open ? (
-        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)}>
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setOpen(false)}
+        >
           <aside
             className="h-full w-72 bg-brand-dark p-4 text-white"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex justify-between">
-              <p className="font-semibold">JobLign PH</p>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <img
+                  src="/logo-ph.png"
+                  alt="JobLign PH Logo"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+                <p className="font-semibold">JobLign PH</p>
+              </div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close menu">
                 <X />
               </button>
             </div>
+            <p className="mb-4 text-sm text-white/70">{title}</p>
             <NavList items={items} pathname={pathname} onNavigate={() => setOpen(false)} />
           </aside>
         </div>
       ) : null}
 
       <div className="lg:grid lg:grid-cols-[16rem_1fr]">
-        <aside className="hidden min-h-screen bg-brand-dark p-5 text-white lg:block">
-          <p className="text-lg font-semibold">JobLign PH</p>
-          <p className="mt-1 text-sm text-white/70">{title}</p>
-          <div className="mt-6">
-            <NavList items={items} pathname={pathname} />
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-0 h-screen overflow-y-auto bg-brand-dark p-5 text-white">
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo-ph.png"
+                alt="JobLign PH Logo"
+                className="h-9 w-9 rounded-full object-cover"
+              />
+              <div>
+                <p className="text-lg font-semibold">JobLign PH</p>
+                <p className="text-sm text-white/70">{title}</p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <NavList items={items} pathname={pathname} />
+            </div>
           </div>
         </aside>
+
         <div>
+          {/* Desktop top bar */}
           <div className="hidden items-center justify-between border-b border-line bg-white px-8 py-4 lg:flex">
             <div>
               <p className="text-sm text-muted">Welcome,</p>
@@ -94,6 +134,7 @@ export function DashboardShell({
               </button>
             </div>
           </div>
+
           <main className="p-4 lg:p-8">{children}</main>
         </div>
       </div>
@@ -110,10 +151,26 @@ function NavList({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  function isActive(href: string) {
+    if (href === "/seeker" || href === "/employer" || href === "/admin") {
+      return pathname === href;
+    }
+
+    if (href === "/employer/jobs") {
+      return pathname === "/employer/jobs";
+    }
+
+    if (href === "/employer/jobs/new") {
+      return pathname === "/employer/jobs/new";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
   return (
     <nav className="space-y-1">
       {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isActive(item.href);
         return (
           <Link
             key={item.href}

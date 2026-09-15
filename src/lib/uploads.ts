@@ -1,9 +1,7 @@
-import { mkdir, writeFile, unlink } from "node:fs/promises";
-import path from "node:path";
+import { put, del } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { ALLOWED_IMAGE_TYPES, ALLOWED_RESUME_TYPES } from "@/lib/constants";
-
-const uploadRoot = path.resolve(process.cwd(), "public", "uploads");
 
 export async function saveUpload(
   file: File,
@@ -19,33 +17,36 @@ export async function saveUpload(
   }
 
   const ext = path.extname(file.name).toLowerCase() || "";
-  const dir = path.join(uploadRoot, folder);
-  await mkdir(dir, { recursive: true });
-  const storedName = `${randomUUID()}${ext}`;
-  const fullPath = path.join(dir, storedName);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(fullPath, buffer);
+  const safeName = `${folder}/${randomUUID()}${ext}`;
+
+  const blob = await put(safeName, file, {
+    access: "public",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+  });
+
   return {
     fileName: file.name.replace(/[^\w.\- ]+/g, "_"),
-    relativePath: path.join(folder, storedName).replaceAll("\\", "/"),
-    fullPath,
+    relativePath: blob.url, // cloud URL
+    fullPath: blob.url,
   };
 }
 
-export function resolveUpload(relativePath: string) {
-  const full = path.resolve(uploadRoot, relativePath);
-  if (!full.startsWith(uploadRoot)) {
-    throw new Error("Invalid file path.");
-  }
-  return full;
-}
-
-export async function removeUpload(relativePath: string) {
+export async function removeUpload(urlOrPath: string) {
   try {
-    await unlink(resolveUpload(relativePath));
+    // Only delete if it's a blob URL
+    if (urlOrPath.includes("blob.vercel-storage.com")) {
+      await del(urlOrPath, {
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+    }
   } catch {
     // ignore missing files
   }
+}
+
+export function resolveUpload(relativePath: string) {
+  // For cloud URLs, just return the URL
+  return relativePath;
 }
 
 export const resumeUploadOptions = {
@@ -56,4 +57,14 @@ export const resumeUploadOptions = {
 export const logoUploadOptions = {
   allowed: ALLOWED_IMAGE_TYPES,
   maxBytes: 2 * 1024 * 1024,
+};
+
+export const certUploadOptions = {
+  allowed: [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "application/pdf",
+  ],
+  maxBytes: 5 * 1024 * 1024,
 };

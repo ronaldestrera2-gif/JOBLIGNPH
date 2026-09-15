@@ -28,9 +28,14 @@ export default async function JobDetailPage({
   if (!job) notFound();
 
   const session = await auth();
-  let match = null;
+  let match: {
+    matchScore: number;
+    matchingSkills: string[];
+    missingSkills: string[];
+  } | null = null;
   let resumes: { resume_id: number; file_name: string }[] = [];
   let alreadyApplied = false;
+  let aiInsight: string | null = null;
 
   if (session?.user?.role === ROLES.JOB_SEEKER) {
     const seeker = await prisma.jobSeeker.findUnique({
@@ -46,6 +51,21 @@ export default async function JobDetailPage({
         candidateSkills: seeker.seekerSkills.map((s) => s.skill.skill_name),
         requiredSkills: job.jobSkills.map((s) => s.skill.skill_name),
       });
+
+      // AI Skill-Based Match Insight
+      try {
+        const { getAIMatchInsight } = await import("@/lib/ai-matching");
+        aiInsight = await getAIMatchInsight({
+          jobTitle: job.job_title,
+          requiredSkills: job.jobSkills.map((s) => s.skill.skill_name),
+          candidateSkills: seeker.seekerSkills.map((s) => s.skill.skill_name),
+          matchScore: match.matchScore,
+        });
+      } catch (error) {
+        console.error("AI insight error:", error);
+        aiInsight = null;
+      }
+
       resumes = seeker.resumes;
       alreadyApplied = Boolean(
         await prisma.application.findUnique({
@@ -68,7 +88,7 @@ export default async function JobDetailPage({
 
       <main className="mx-auto max-w-4xl px-4 py-8 space-y-4">
         <Card>
-          {/* Company Logo + Name (Clickable for full profile) */}
+          {/* Company Logo + Name */}
           <div className="flex items-center gap-4 mb-4">
             <Link
               href={`/profile/company/${job.employer.employer_id}`}
@@ -130,12 +150,25 @@ export default async function JobDetailPage({
           </div>
         </Card>
 
+        {/* Match Score */}
         {match ? (
           <MatchPanel
             score={match.matchScore}
             matching={match.matchingSkills}
             missing={match.missingSkills}
           />
+        ) : null}
+
+        {/* AI Skill-Based Match Insight */}
+        {aiInsight ? (
+          <Card className="p-4">
+            <h2 className="mb-2 text-lg font-semibold">
+              AI Skill-Based Match Insight
+            </h2>
+            <p className="text-sm whitespace-pre-wrap leading-6 text-slate-700">
+              {aiInsight}
+            </p>
+          </Card>
         ) : null}
 
         {session?.user?.role === ROLES.JOB_SEEKER ? (

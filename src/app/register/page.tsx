@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { Alert, Button, Input, Label, Select } from "@/components/ui";
 
 export default function RegisterPage() {
@@ -15,10 +16,13 @@ export default function RegisterPage() {
     role: "job_seeker",
     company_name: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   }
 
@@ -26,18 +30,22 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.error || "Registration failed.");
         setLoading(false);
         return;
       }
+
       router.push("/login");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -47,14 +55,12 @@ export default function RegisterPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      
-      {/* Back Button - Top Left */}
       <div className="absolute top-6 left-6">
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-lg bg-white border border-line px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-brand"
         >
-          ← Back
+          ← Back to Homepage
         </Link>
       </div>
 
@@ -103,14 +109,29 @@ export default function RegisterPage() {
 
           <div>
             <Label>Password</Label>
-            <Input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              value={formData.password}
-              onChange={handleChange}
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                required
+                minLength={8}
+                value={formData.password}
+                onChange={handleChange}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             <p className="mt-1 text-xs text-muted">
               At least 8 characters, including a letter and a number.
             </p>

@@ -1,13 +1,13 @@
-import { APPLICATION_PIPELINE } from "@/lib/constants";
 import { Badge } from "@/components/ui";
+
+const APPLICATION_PIPELINE = ["applied", "interview", "hired"] as const;
 
 const tone: Record<string, "slate" | "green" | "amber" | "blue" | "red" | "purple"> = {
   applied: "blue",
-  shortlisted: "purple",
   interview: "amber",
-  offered: "green",
   hired: "green",
   rejected: "red",
+  cancelled: "red",
   active: "green",
   closed: "slate",
   draft: "amber",
@@ -15,25 +15,52 @@ const tone: Record<string, "slate" | "green" | "amber" | "blue" | "red" | "purpl
   verified: "green",
   scheduled: "blue",
   completed: "green",
-  cancelled: "red",
   rescheduled: "amber",
+  admin: "purple",
+  employer: "purple",
+  job_seeker: "purple",
 };
 
 export function StatusBadge({ value }: { value: string }) {
-  return <Badge tone={tone[value] ?? "slate"}>{value.replaceAll("_", " ")}</Badge>;
+  return (
+    <Badge tone={tone[value] ?? "slate"}>
+      {value.replaceAll("_", " ")}
+    </Badge>
+  );
 }
 
 export function ApplicationTimeline({ status }: { status: string }) {
-  const rejected = status === "rejected";
+  const normalized = (status || "").toLowerCase();
+
+  // Rejected or Cancelled end path
+  if (normalized === "rejected" || normalized === "cancelled") {
+    return (
+      <ol className="flex flex-wrap items-center gap-2 text-sm">
+        <li className="flex items-center gap-2">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 capitalize text-emerald-800">
+            applied
+          </span>
+          <span className="text-slate-400">→</span>
+        </li>
+        <li>
+          <span className="rounded-full bg-red-100 px-3 py-1 capitalize text-red-700">
+            {normalized}
+          </span>
+        </li>
+      </ol>
+    );
+  }
+
   const current = APPLICATION_PIPELINE.indexOf(
-    status as (typeof APPLICATION_PIPELINE)[number],
+    normalized as (typeof APPLICATION_PIPELINE)[number]
   );
 
   return (
     <ol className="flex flex-wrap items-center gap-2 text-sm">
       {APPLICATION_PIPELINE.map((step, index) => {
-        const done = !rejected && current >= index;
-        const isCurrent = step === status;
+        const done = current >= index;
+        const isCurrent = step === normalized;
+
         return (
           <li key={step} className="flex items-center gap-2">
             <span
@@ -53,11 +80,6 @@ export function ApplicationTimeline({ status }: { status: string }) {
           </li>
         );
       })}
-      {rejected ? (
-        <li>
-          <span className="rounded-full bg-red-100 px-3 py-1 text-red-700">Rejected</span>
-        </li>
-      ) : null}
     </ol>
   );
 }

@@ -84,11 +84,12 @@ model JobSeeker {
   other_qualifications       String?
   created_at                 DateTime @default(now())
 
-  user         User          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  resumes      Resume[]
-  seekerSkills SeekerSkill[]
-  applications Application[]
-  jobMatchings JobMatching[]
+  user               User                @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  resumes            Resume[]
+  seekerSkills       SeekerSkill[]
+  applications       Application[]
+  jobMatchings       JobMatching[]
+  certificationFiles CertificationFile[]
 }
 
 model Resume {
@@ -132,6 +133,7 @@ model JobPosting {
   location        String?
   employment_type String?
   salary_range    String?
+  salary_period   String?
   salary_min      Int?
   salary_max      Int?
   status          String    @default("draft")
@@ -265,4 +267,16 @@ model SystemSetting {
   setting_key   String   @id
   setting_value String
   updated_at    DateTime @updatedAt
+}
+
+model CertificationFile {
+  cert_id     Int      @id @default(autoincrement())
+  seeker_id   Int
+  file_name   String
+  file_path   String
+  uploaded_at DateTime @default(now())
+
+  jobSeeker JobSeeker @relation(fields: [seeker_id], references: [seeker_id], onDelete: Cascade)
+
+  @@index([seeker_id])
 }

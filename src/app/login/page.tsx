@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { Alert, Button, Input, Label } from "@/components/ui";
 
 export default function LoginPage() {
@@ -11,6 +12,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,9 +30,7 @@ export default function LoginPage() {
       });
 
       if (!result || result.error) {
-        setError(
-          "Invalid email or password, or this account is not active."
-        );
+        setError("Invalid email or password, or this account is not active.");
         setLoading(false);
         return;
       }
@@ -41,9 +41,9 @@ export default function LoginPage() {
       if (session?.user?.role === "admin") {
         router.push("/admin");
       } else if (session?.user?.role === "employer") {
-        router.push("/employer");
+        router.push("/employer/company?required=1");
       } else if (session?.user?.role === "job_seeker") {
-        router.push("/seeker");
+        router.push("/seeker/profile?required=1");
       } else {
         setError("Your account has an invalid role.");
         setLoading(false);
@@ -51,8 +51,7 @@ export default function LoginPage() {
       }
 
       router.refresh();
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch {
       setError("Something went wrong while logging in.");
       setLoading(false);
     }
@@ -60,14 +59,12 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-      
-      {/* Back Button - Top Left */}
       <div className="absolute top-6 left-6">
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-lg bg-white border border-line px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-brand"
         >
-          ← Back
+          ← Back to Homepage
         </Link>
       </div>
 
@@ -102,15 +99,30 @@ export default function LoginPage() {
 
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">

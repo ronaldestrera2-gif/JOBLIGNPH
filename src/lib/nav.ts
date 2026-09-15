@@ -3,11 +3,11 @@ export const seekerNav = [
   { href: "/seeker/jobs", label: "Find Jobs" },
   { href: "/seeker/recommendations", label: "Recommendations" },
   { href: "/seeker/applications", label: "My Applications" },
-  { href: "/seeker/resume", label: "My Resume" },
   { href: "/seeker/profile", label: "My Profile" },
   { href: "/seeker/interviews", label: "Interviews" },
   { href: "/seeker/messages", label: "Messages" },
   { href: "/seeker/notifications", label: "Notifications" },
+  { href: "/seeker/resume-builder", label: "AI Resume Builder" }
 ];
 
 export const employerNav = [

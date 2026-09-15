@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/lib/authz";
 import { ROLES } from "@/lib/constants";
 import { jobPostingSchema } from "@/lib/validations";
-import { formatPesoRange, isExpired } from "@/lib/utils";
+import { isExpired } from "@/lib/utils";
 import { getSetting } from "@/lib/matching-service";
 import { syncJobSkills } from "@/lib/skills";
 import { Prisma } from "@prisma/client";
@@ -16,7 +16,6 @@ function jobWhere(search: URLSearchParams): Prisma.JobPostingWhereInput {
   const skill = search.get("skill")?.trim();
   const status = search.get("status")?.trim();
   const salary_min = search.get("salary_min");
-  const salary_max = search.get("salary_max");
   const deadline = search.get("deadline");
 
   const where: Prisma.JobPostingWhereInput = {
@@ -34,13 +33,38 @@ function jobWhere(search: URLSearchParams): Prisma.JobPostingWhereInput {
   if (location) where.location = { contains: location };
   if (employment_type) where.employment_type = employment_type;
   if (skill) {
-    where.jobSkills = { some: { skill: { skill_name: { contains: skill } } } };
+    where.jobSkills = {
+      some: { skill: { skill_name: { contains: skill } } },
+    };
   }
-  if (salary_min) where.salary_max = { gte: Number(salary_min) };
-  if (salary_max) where.salary_min = { lte: Number(salary_max) };
+  if (salary_min) where.salary_min = { gte: Number(salary_min) };
   if (deadline) where.deadline = { lte: new Date(deadline) };
 
   return where;
+}
+
+function statusFilter<T extends { status: string; deadline: Date | null }>(
+  search: URLSearchParams,
+  all: T[],
+  open: T[],
+) {
+  const status = search.get("status");
+  if (status) return all;
+  return open.length ? open : all.filter((j) => j.status === "active");
+}
+
+function formatSalaryDisplay(
+  salaryMin: number | null,
+  salaryPeriod: string | null,
+) {
+  if (!salaryMin) return "Salary not specified";
+  const period =
+    salaryPeriod === "weekly"
+      ? "per week"
+      : salaryPeriod === "monthly"
+        ? "per month"
+        : salaryPeriod || "";
+  return `₱${salaryMin.toLocaleString()}${period ? ` ${period}` : ""}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -54,10 +78,7 @@ export async function GET(req: NextRequest) {
       employer: { include: { companyProfile: true } },
       jobSkills: { include: { skill: true } },
     },
-    orderBy:
-      sort === "deadline"
-        ? { deadline: "asc" }
-        : { posted_at: "desc" },
+    orderBy: sort === "deadline" ? { deadline: "asc" } : { posted_at: "desc" },
   });
 
   const openJobs = jobs.filter(
@@ -65,13 +86,13 @@ export async function GET(req: NextRequest) {
   );
 
   return NextResponse.json({
-    jobs: (statusFilter(search, jobs, openJobs)).map((job) => ({
+    jobs: statusFilter(search, jobs, openJobs).map((job) => ({
       job_id: job.job_id,
       job_title: job.job_title,
       job_description: job.job_description,
       location: job.location,
       employment_type: job.employment_type,
-      salary_range: formatPesoRange(job.salary_min, job.salary_max, job.salary_range),
+      salary_range: formatSalaryDisplay(job.salary_min, job.salary_range),
       status: job.status,
       posted_at: job.posted_at,
       deadline: job.deadline,
@@ -84,58 +105,108 @@ export async function GET(req: NextRequest) {
   });
 }
 
-function statusFilter<T extends { status: string; deadline: Date | null }>(
-  search: URLSearchParams,
-  all: T[],
-  open: T[],
-) {
-  const status = search.get("status");
-  if (status) return all;
-  return open.length ? open : all.filter((j) => j.status === "active");
-}
-
 export async function POST(req: Request) {
-  const gate = await requireApiSession([ROLES.EMPLOYER]);
-  if ("error" in gate && gate.error) return gate.error;
-  const userId = Number(gate.user!.id);
+  try {
+    const gate = await requireApiSession([ROLES.EMPLOYER]);
+    if ("error" in gate && gate.error) return gate.error;
 
-  const employer = await prisma.employer.findUnique({ where: { user_id: userId } });
-  if (!employer) {
-    return NextResponse.json({ error: "Employer profile not found." }, { status: 404 });
-  }
+    const userId = Number(gate.user!.id);
+    const employer = await prisma.employer.findUnique({
+      where: { user_id: userId },
+    });
 
-  const requireVerify = (await getSetting("require_employer_verification", "true")) === "true";
-  const body = await req.json();
-  const parsed = jobPostingSchema.safeParse(body);
-  if (!parsed.success) {
+    if (!employer) {
+      return NextResponse.json(
+        { error: "Employer profile not found." },
+        { status: 404 },
+      );
+    }
+
+    const requireVerify =
+      (await getSetting("require_employer_verification", "true")) === "true";
+
+    const body = await req.json();
+
+    const status = String(body.status || "active");
+    if (status !== "active" && status !== "draft") {
+      return NextResponse.json(
+        { error: "Status must be Active or Draft only." },
+        { status: 400 },
+      );
+    }
+
+    const salaryPeriod = String(body.salary_period || "monthly");
+    if (salaryPeriod !== "monthly" && salaryPeriod !== "weekly") {
+      return NextResponse.json(
+        { error: "Salary period must be monthly or weekly." },
+        { status: 400 },
+      );
+    }
+
+    const cleanedSkills = (Array.isArray(body.skills) ? body.skills : [])
+      .map((s: unknown) => (typeof s === "string" ? s.trim() : ""))
+      .filter(Boolean);
+
+    const parsed = jobPostingSchema.safeParse({
+      ...body,
+      status,
+      salary_max: null,
+      salary_min:
+        body.salary_min === "" || body.salary_min == null
+          ? null
+          : Number(body.salary_min),
+      deadline: body.deadline || null,
+      skills: cleanedSkills,
+    });
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: parsed.error.issues[0]?.message ?? "Invalid job details.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      parsed.data.status === "active" &&
+      requireVerify &&
+      employer.verification_status !== "verified"
+    ) {
+      return NextResponse.json(
+        { error: "Your company must be verified before publishing jobs." },
+        { status: 403 },
+      );
+    }
+
+    const job = await prisma.jobPosting.create({
+      data: {
+        employer_id: employer.employer_id,
+        job_title: parsed.data.job_title,
+        job_description: parsed.data.job_description,
+        location: parsed.data.location,
+        employment_type: parsed.data.employment_type,
+        salary_min: parsed.data.salary_min ?? null,
+        salary_max: null,
+        salary_range: salaryPeriod, // monthly | weekly
+        deadline: parsed.data.deadline
+          ? new Date(parsed.data.deadline)
+          : null,
+        status: parsed.data.status,
+      },
+    });
+
+    await syncJobSkills(job.job_id, cleanedSkills);
+
+    return NextResponse.json({ job_id: job.job_id }, { status: 201 });
+  } catch (error: any) {
+    console.error("Create job error:", error);
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid job details." },
-      { status: 400 },
+      {
+        error: error?.message || "Server error while creating job.",
+        detail: String(error),
+      },
+      { status: 500 },
     );
   }
-
-  if (parsed.data.status === "active" && requireVerify && employer.verification_status !== "verified") {
-    return NextResponse.json(
-      { error: "Your company must be verified before publishing jobs." },
-      { status: 403 },
-    );
-  }
-
-  const job = await prisma.jobPosting.create({
-    data: {
-      employer_id: employer.employer_id,
-      job_title: parsed.data.job_title,
-      job_description: parsed.data.job_description,
-      location: parsed.data.location,
-      employment_type: parsed.data.employment_type,
-      salary_min: parsed.data.salary_min,
-      salary_max: parsed.data.salary_max,
-      salary_range: formatPesoRange(parsed.data.salary_min, parsed.data.salary_max, null),
-      deadline: new Date(parsed.data.deadline),
-      status: parsed.data.status,
-    },
-  });
-
-  await syncJobSkills(job.job_id, parsed.data.skills);
-  return NextResponse.json({ job_id: job.job_id }, { status: 201 });
 }
