@@ -129,7 +129,7 @@ export async function PATCH(
       salary_min: parsed.data.salary_min,
       salary_max: parsed.data.salary_max,
       salary_range: formatPesoRange(parsed.data.salary_min, parsed.data.salary_max, null),
-      deadline: new Date(parsed.data.deadline),
+      deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
       status: parsed.data.status,
     },
   });
