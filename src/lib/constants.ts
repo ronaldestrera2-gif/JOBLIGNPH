@@ -26,21 +26,13 @@ export const SKILL_LEVELS = [
 
 export const JOB_STATUSES = ["draft", "active", "closed"] as const;
 
+export const APPLICATION_PIPELINE = ["applied", "interview", "hired"] as const;
 export const APPLICATION_STATUSES = [
   "applied",
-  "shortlisted",
   "interview",
-  "offered",
+  "hired",
   "rejected",
-  "hired",
-] as const;
-
-export const APPLICATION_PIPELINE = [
-  "applied",
-  "shortlisted",
-  "interview",
-  "offered",
-  "hired",
+  "cancelled",
 ] as const;
 
 export const INTERVIEW_STATUSES = [
