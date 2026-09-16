@@ -5,16 +5,18 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Za-z]/, "Password must include a letter")
+  .regex(/[0-9]/, "Password must include a number");
+
 export const registerSchema = z
   .object({
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().min(1, "Last name is required"),
     email: z.string().email("Enter a valid email"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Za-z]/, "Password must include a letter")
-      .regex(/[0-9]/, "Password must include a number"),
+    password: passwordSchema,
     role: z.enum(["job_seeker", "employer"]),
     company_name: z.string().optional(),
   })
@@ -74,23 +76,34 @@ export const applicationSchema = z.object({
 
 export const applicationStatusSchema = z.object({
   application_id: z.coerce.number().int().positive(),
-  status: z.enum(["applied", "interview", "hired", "rejected", "cancelled"]),
+  status: z.enum([
+    "applied",
+    "shortlisted",
+    "interview",
+    "offered",
+    "hired",
+    "rejected",
+    "cancelled",
+  ]),
 });
 
-// Admin employer verification
+// Used by admin employer verify route
 export const verificationSchema = z.object({
-  status: z.enum(["verified", "rejected", "pending"]),
+  verification_status: z.enum(["verified", "rejected", "pending"]),
   notes: z.string().optional().nullable(),
+  // keep compatibility if some code uses status
+  status: z.enum(["verified", "rejected", "pending"]).optional(),
 });
 
-// Interviews
 export const interviewSchema = z.object({
   application_id: z.coerce.number().int().positive(),
   interview_date: z.string().min(1, "Interview date is required"),
   interview_time: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  status: z.enum(["scheduled", "completed", "cancelled", "rescheduled"]).optional(),
+  status: z
+    .enum(["scheduled", "completed", "cancelled", "rescheduled"])
+    .optional(),
 });
 
 export const interviewUpdateSchema = z.object({
@@ -98,10 +111,11 @@ export const interviewUpdateSchema = z.object({
   interview_time: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  status: z.enum(["scheduled", "completed", "cancelled", "rescheduled"]).optional(),
+  status: z
+    .enum(["scheduled", "completed", "cancelled", "rescheduled"])
+    .optional(),
 });
 
-// Messages
 export const messageSchema = z.object({
   body: z.string().min(1, "Message is required"),
 });
@@ -112,14 +126,13 @@ export const conversationSchema = z.object({
   body: z.string().min(1).optional(),
 });
 
-// Admin settings
 export const settingsSchema = z.object({
   require_employer_verification: z.union([z.boolean(), z.string()]).optional(),
+  platform_name: z.string().optional(),
   setting_key: z.string().optional(),
   setting_value: z.string().optional(),
 });
 
-// Admin user status
 export const userStatusSchema = z.object({
   user_id: z.coerce.number().int().positive(),
   status: z.enum(["active", "inactive", "suspended", "banned"]),

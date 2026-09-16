@@ -1,17 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { EMPLOYMENT_TYPES } from "@/lib/constants";
 
-export function JobForm() {
+type InitialJob = {
+  job_title: string;
+  job_description: string;
+  location: string;
+  employment_type: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  deadline: string;
+  status: string;
+  skills: { skill_name?: string; name?: string }[] | string[];
+};
+
+function normalizeSkills(
+  skills: InitialJob["skills"] | undefined
+): string[] {
+  if (!skills) return [];
+  return skills
+    .map((s) => {
+      if (typeof s === "string") return s.trim();
+      return String(s.skill_name || s.name || "").trim();
+    })
+    .filter(Boolean);
+}
+
+export function JobForm({
+  jobId,
+  initial,
+}: {
+  jobId?: number;
+  initial?: InitialJob;
+} = {}) {
   const router = useRouter();
+  const isEdit = Boolean(jobId);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const startingSkills = useMemo(
+    () => normalizeSkills(initial?.skills),
+    [initial?.skills]
+  );
+
   const [skillInput, setSkillInput] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>(startingSkills);
 
   function addSkill() {
     const value = skillInput.trim();
@@ -40,8 +77,15 @@ export function JobForm() {
       const form = new FormData(e.currentTarget);
       const status = String(form.get("status") || "active");
 
-      if (status !== "active" && status !== "draft") {
-        setError("Status must be Active or Draft only.");
+      if (status !== "active" && status !== "draft" && status !== "closed") {
+        setError("Invalid status.");
+        setLoading(false);
+        return;
+      }
+
+      // When creating, only draft/active
+      if (!isEdit && status === "closed") {
+        setError("Status must be Active or Draft only when creating.");
         setLoading(false);
         return;
       }
@@ -61,8 +105,8 @@ export function JobForm() {
         skills,
       };
 
-      const res = await fetch("/api/jobs", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/jobs/${jobId}` : "/api/jobs", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -78,7 +122,7 @@ export function JobForm() {
       }
 
       if (!res.ok) {
-        setError(data.error || "Could not create job.");
+        setError(data.error || `Could not ${isEdit ? "update" : "create"} job.`);
         setLoading(false);
         return;
       }
@@ -87,7 +131,7 @@ export function JobForm() {
       router.refresh();
     } catch (err) {
       console.error(err);
-      setError("Something went wrong while creating the job.");
+      setError("Something went wrong while saving the job.");
       setLoading(false);
     }
   }
@@ -98,7 +142,11 @@ export function JobForm() {
 
       <div>
         <Label>Job title</Label>
-        <Input name="job_title" required />
+        <Input
+          name="job_title"
+          required
+          defaultValue={initial?.job_title || ""}
+        />
       </div>
 
       <div>
@@ -107,6 +155,7 @@ export function JobForm() {
           name="job_description"
           rows={8}
           required
+          defaultValue={initial?.job_description || ""}
           placeholder="Write the full job description..."
         />
       </div>
@@ -114,12 +163,19 @@ export function JobForm() {
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <Label>Location</Label>
-          <Input name="location" required />
+          <Input
+            name="location"
+            required
+            defaultValue={initial?.location || ""}
+          />
         </div>
 
         <div>
           <Label>Employment type</Label>
-          <Select name="employment_type" defaultValue="full-time">
+          <Select
+            name="employment_type"
+            defaultValue={initial?.employment_type || "full-time"}
+          >
             {(EMPLOYMENT_TYPES || [
               "full-time",
               "part-time",
@@ -142,6 +198,7 @@ export function JobForm() {
             min={0}
             name="salary_min"
             placeholder="e.g. 15000"
+            defaultValue={initial?.salary_min ?? ""}
           />
         </div>
 
@@ -157,14 +214,26 @@ export function JobForm() {
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <Label>Application deadline</Label>
-          <Input type="date" name="deadline" />
+          <Input
+            type="date"
+            name="deadline"
+            defaultValue={
+              initial?.deadline
+                ? initial.deadline.slice(0, 10)
+                : ""
+            }
+          />
         </div>
 
         <div>
           <Label>Status</Label>
-          <Select name="status" defaultValue="active">
+          <Select
+            name="status"
+            defaultValue={initial?.status || "active"}
+          >
             <option value="active">Active</option>
             <option value="draft">Draft</option>
+            {isEdit ? <option value="closed">Closed</option> : null}
           </Select>
         </div>
       </div>
@@ -212,7 +281,13 @@ export function JobForm() {
       </div>
 
       <Button type="submit" disabled={loading}>
-        {loading ? "Creating..." : "Create job"}
+        {loading
+          ? isEdit
+            ? "Saving..."
+            : "Creating..."
+          : isEdit
+            ? "Save job"
+            : "Create job"}
       </Button>
     </form>
   );
