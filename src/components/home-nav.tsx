@@ -13,16 +13,18 @@ export function HomeNav({
 }) {
   const pathname = usePathname();
 
-  const linkClass = (href: string) =>
+  const linkClass = (href: string, solid = false) =>
     cn(
-      "rounded-lg px-3 py-2 font-medium transition",
-      pathname === href
-        ? "bg-[#0b4f6c] text-white"
-        : "text-[#50677a] hover:bg-[#e8f1f5] hover:text-[#0b4f6c]"
+      "rounded-lg px-3 py-2 text-sm font-medium transition whitespace-nowrap",
+      solid
+        ? "bg-[#0b4f6c] text-white hover:bg-[#08384d]"
+        : pathname === href
+          ? "bg-[#0b4f6c] text-white"
+          : "text-[#50677a] hover:bg-[#e8f1f5] hover:text-[#0b4f6c]"
     );
 
   return (
-    <nav className="flex items-center gap-3">
+    <nav className="flex max-w-full flex-wrap items-center justify-end gap-2">
       <Link href="/" className={linkClass("/")}>
         Homepage
       </Link>
@@ -32,10 +34,7 @@ export function HomeNav({
       </Link>
 
       {isLoggedIn ? (
-        <Link
-          href={dashboardHref || "/"}
-          className="rounded-lg bg-[#0b4f6c] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#08384d]"
-        >
+        <Link href={dashboardHref || "/"} className={linkClass(dashboardHref || "/", true)}>
           Dashboard
         </Link>
       ) : (
@@ -43,10 +42,7 @@ export function HomeNav({
           <Link href="/login" className={linkClass("/login")}>
             Login
           </Link>
-          <Link
-            href="/register"
-            className="rounded-lg border border-[#0b4f6c] px-4 py-2 text-sm font-medium text-[#0b4f6c] transition hover:bg-[#e8f1f5]"
-          >
+          <Link href="/register" className={linkClass("/register", true)}>
             Register
           </Link>
         </>
