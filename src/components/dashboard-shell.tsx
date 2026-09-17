@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { Menu, X, Bell, LogOut } from "lucide-react";
@@ -24,7 +24,9 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const notificationsHref =
     items.find((i) => i.label.toLowerCase().includes("notification"))?.href ||
@@ -35,6 +37,25 @@ export function DashboardShell({
       return pathname === href;
     }
     return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  async function handleLogout() {
+    try {
+      setLoggingOut(true);
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+
+      await signOut({
+        redirect: false,
+        callbackUrl: `${origin}/`,
+      });
+
+      // force go home on same domain
+      window.location.href = `${origin}/`;
+    } catch {
+      setLoggingOut(false);
+      router.push("/");
+    }
   }
 
   return (
@@ -59,21 +80,19 @@ export function DashboardShell({
 
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            disabled={loggingOut}
+            onClick={handleLogout}
             className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-semibold text-red-600"
           >
             <LogOut className="h-3.5 w-3.5" />
-            Logout
+            {loggingOut ? "..." : "Logout"}
           </button>
         </div>
       </header>
 
       {/* MOBILE SIDEBAR */}
       {open ? (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        >
+        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)}>
           <aside
             className="h-full w-72 bg-[#0b4f6c] p-4 text-white"
             onClick={(e) => e.stopPropagation()}
@@ -106,11 +125,12 @@ export function DashboardShell({
 
             <button
               type="button"
+              disabled={loggingOut}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
-              Logout
+              {loggingOut ? "Logging out..." : "Logout"}
             </button>
           </aside>
         </div>
@@ -137,15 +157,15 @@ export function DashboardShell({
 
           <button
             type="button"
+            disabled={loggingOut}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-red-500/90 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            {loggingOut ? "Logging out..." : "Logout"}
           </button>
         </aside>
 
-        {/* CONTENT */}
         <div className="min-w-0 flex-1">
           <div className="sticky top-0 z-10 hidden items-center justify-between border-b border-line bg-white px-6 py-4 lg:flex">
             <div>
@@ -168,10 +188,11 @@ export function DashboardShell({
 
               <button
                 type="button"
+                disabled={loggingOut}
                 className="text-sm font-medium text-red-600"
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={handleLogout}
               >
-                Logout
+                {loggingOut ? "Logging out..." : "Logout"}
               </button>
             </div>
           </div>
