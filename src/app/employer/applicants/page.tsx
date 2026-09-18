@@ -43,7 +43,7 @@ export default async function AllApplicantsPage() {
           requiredSkills: a.jobPosting.jobSkills.map((s) => s.skill.skill_name),
         });
 
-        // Use application resume first, otherwise use the seeker's latest resume
+        
         const resume = a.resume || a.jobSeeker.resumes[0] || null;
 
         return (

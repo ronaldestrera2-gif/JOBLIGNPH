@@ -32,7 +32,7 @@ export function StatusBadge({ value }: { value: string }) {
 export function ApplicationTimeline({ status }: { status: string }) {
   const normalized = (status || "").toLowerCase();
 
-  // Rejected or Cancelled end path
+  // Rejected or Cancelled path
   if (normalized === "rejected" || normalized === "cancelled") {
     return (
       <ol className="flex flex-wrap items-center gap-2 text-sm">

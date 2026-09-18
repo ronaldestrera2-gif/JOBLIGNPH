@@ -45,7 +45,7 @@ export function ApplicantActions({
     }
   }
 
-  // Final statuses: no buttons
+  
   if (status === "hired" || status === "rejected" || status === "cancelled") {
     return null;
   }

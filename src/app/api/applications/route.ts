@@ -184,7 +184,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // non-blocking side effects
+    
     try {
       await matchSeekerToJob(seeker.seeker_id, job.job_id);
     } catch (e) {

@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
 
     const contentType = req.headers.get("content-type") || "";
 
-    // Company logo upload (cloud)
+    
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
       const logo = form.get("logo");
@@ -86,7 +86,7 @@ export async function PATCH(req: Request) {
       });
     }
 
-    // Company profile details (JSON)
+    
     const body = await req.json();
     const parsed = employerProfileSchema.safeParse(body);
 

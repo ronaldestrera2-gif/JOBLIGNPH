@@ -24,7 +24,7 @@ export default async function SeekerPublicProfile({
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
-      {/* Visible Back button top-left */}
+      {/*  Back button  */}
       <div className="pt-2">
         <BackButton fallback="/employer/applicants" label="← Back to Applicants" />
       </div>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
 import { Alert, Button, Input, Label } from "@/components/ui";
 
 export default function LoginPage() {
@@ -18,7 +17,6 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     setLoading(true);
     setError("");
 
@@ -41,9 +39,9 @@ export default function LoginPage() {
       if (session?.user?.role === "admin") {
         router.push("/admin");
       } else if (session?.user?.role === "employer") {
-        router.push("/employer/company?required=1");
+        router.push("/employer");
       } else if (session?.user?.role === "job_seeker") {
-        router.push("/seeker/profile?required=1");
+        router.push("/seeker");
       } else {
         setError("Your account has an invalid role.");
         setLoading(false);
@@ -52,27 +50,24 @@ export default function LoginPage() {
 
       router.refresh();
     } catch {
-      setError("Something went wrong while logging in.");
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="absolute top-6 left-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-lg bg-white border border-line px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-brand"
-        >
-          ← Back to Homepage
-        </Link>
-      </div>
-
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-sm">
-        <h1 className="text-center text-2xl font-semibold text-brand">
-          Sign in to JobLign PH
-        </h1>
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-lg border border-[#0b4f6c] bg-white px-4 py-2 text-sm font-semibold text-[#0b4f6c] hover:bg-[#e8f1f5]"
+          >
+            ← Back to Homepage
+          </Link>
+        </div>
 
+        <h1 className="text-center text-2xl font-semibold">Sign in to JobLign PH</h1>
         <p className="mt-2 text-center text-sm text-muted">
           Use your registered email and password.
         </p>
@@ -108,19 +103,13 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 disabled={loading}
-                className="pr-10"
               />
               <button
                 type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </div>
@@ -129,6 +118,20 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Login"}
           </Button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-line" />
+          <span className="text-xs text-muted">OR</span>
+          <div className="h-px flex-1 bg-line" />
+        </div>
+
+        <button
+          type="button"
+          className="w-full rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-slate-50"
+          onClick={() => signIn("google", { callbackUrl: "/seeker" })}
+        >
+          Continue with Google
+        </button>
 
         <p className="mt-6 text-center text-sm">
           Don&apos;t have an account?{" "}

@@ -83,7 +83,7 @@ export function JobForm({
         return;
       }
 
-      // When creating, only draft/active
+      
       if (!isEdit && status === "closed") {
         setError("Status must be Active or Draft only when creating.");
         setLoading(false);

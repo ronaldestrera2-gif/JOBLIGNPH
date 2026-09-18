@@ -51,7 +51,7 @@ export async function PATCH(req: Request) {
 
     const contentType = req.headers.get("content-type") || "";
 
-    // Profile picture upload (cloud)
+    
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("profile_picture");

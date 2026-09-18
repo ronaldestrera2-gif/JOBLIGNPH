@@ -17,11 +17,7 @@ function normalize(name: string) {
   return name.trim().toLowerCase();
 }
 
-/**
- * Transparent overlap matcher:
- * score = (matching required skills / total required skills) * 100
- * Architecture is strategy-based so a later model can replace this.
- */
+
 export class SkillOverlapStrategy implements MatchingStrategy {
   compute({ requiredSkills, candidateSkills }: SkillMatchInput): SkillMatchResult {
     const requiredUnique = [

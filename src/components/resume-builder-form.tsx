@@ -68,7 +68,7 @@ export function ResumeBuilderForm({ initial }: { initial: Initial }) {
   }
 
   function downloadPdf() {
-    // Opens print dialog — user chooses "Save as PDF"
+    // Opens print dialog chooses "Save as PDF"
     const html = previewRef.current?.innerHTML || "";
     const win = window.open("", "_blank", "width=900,height=1000");
     if (!win) return;

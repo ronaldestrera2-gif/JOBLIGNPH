@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       data: {
         seeker_id: seeker.seeker_id,
         file_name: saved.fileName,
-        file_path: saved.relativePath, // cloud URL
+        file_path: saved.relativePath, 
       },
     });
 

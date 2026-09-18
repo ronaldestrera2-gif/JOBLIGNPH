@@ -76,15 +76,7 @@ export const applicationSchema = z.object({
 
 export const applicationStatusSchema = z.object({
   application_id: z.coerce.number().int().positive(),
-  status: z.enum([
-    "applied",
-    "shortlisted",
-    "interview",
-    "offered",
-    "hired",
-    "rejected",
-    "cancelled",
-  ]),
+  status: z.enum(["applied", "interview", "hired", "rejected", "cancelled"]),
 });
 
 // Used by admin employer verify route

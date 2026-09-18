@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Seeker not found." }, { status: 404 });
   }
 
-  // Adjust field names if your schema differs
+  
   const interview = await prisma.interview.findUnique({
     where: { interview_id: interviewId },
     include: {
@@ -62,17 +62,17 @@ export async function POST(req: Request) {
     );
   }
 
-  // 1) Cancel interview
+  
   await prisma.interview.update({
     where: { interview_id: interviewId },
     data: {
       status: "cancelled",
-      // if you have cancellation_reason column, save it:
-      // cancellation_reason: reason,
+      
+      
     },
   });
 
-  // 2) Also mark application cancelled (optional but useful)
+  
   await prisma.application.update({
     where: { application_id: interview.application.application_id },
     data: { status: "cancelled" },
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   const seekerUser = interview.application.jobSeeker.user;
   const jobTitle = interview.application.jobPosting.job_title;
 
-  // 3) Create / reuse conversation and send message to employer
+  
   let conversation = await prisma.conversation.findFirst({
     where: {
       job_id: interview.application.job_id,
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     },
   });
 
-  // 4) Notify employer
+  
   await prisma.notification.create({
     data: {
       user_id: employerUserId,

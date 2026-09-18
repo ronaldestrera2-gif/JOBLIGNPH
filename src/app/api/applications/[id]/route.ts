@@ -137,9 +137,9 @@ export async function PATCH(
         return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
       }
 
-      // Employer flow:
-      // applied -> interview | rejected
-      // interview -> hired | rejected
+      
+      
+      
       if (current === "applied") {
         if (nextStatus !== "interview" && nextStatus !== "rejected") {
           return NextResponse.json(
@@ -169,7 +169,7 @@ export async function PATCH(
       data: { status: nextStatus },
     });
 
-    // Notifications (best effort)
+    
     try {
       if (role === ROLES.EMPLOYER || role === ROLES.ADMIN) {
         await notifyUser({

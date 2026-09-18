@@ -79,7 +79,7 @@ export default async function JobApplicantsPage({
       {rows.length === 0 ? <EmptyState title="No applicants yet." /> : null}
 
       {rows.map(({ a, match }) => {
-        // Use application resume first, otherwise use the seeker's latest resume
+        
         const resume = a.resume || a.jobSeeker.resumes[0] || null;
 
         return (

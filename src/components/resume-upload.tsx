@@ -27,7 +27,7 @@ export function ResumeUpload({
 
     const form = new FormData(e.currentTarget);
 
-    // Uses your existing API: POST /api/resumes with field name "file"
+    
     const res = await fetch("/api/resumes", {
       method: "POST",
       body: form,
